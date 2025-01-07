@@ -1136,3 +1136,71 @@ $ curl -s http://localhost:8080/encode
 {"firstname":"John","lastname":"Doe","age":25}
 ```
 
+# 12-WebSockets
+
+> 该文件目录为`gowebexample02/12-WebSockets`
+
+本示例将展示如何在 Go 中使用 `websocket`。我们将构建一个简单的服务器，它会将我们发送给它的所有内容回显回来。 为此，我们必须像这样获取流行的 `gorilla/websocket` 库：
+
+```bash
+$ go get github.com/gorilla/websocket
+```
+
+从现在开始，我们编写的每个应用程序都将能够使用此库。
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/websocket"
+)
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+func main() {
+	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		conn, _ := upgrader.Upgrade(w, r, nil)
+
+		for {
+			// Read message from browser
+			msgType, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+
+			// Print the message to the console
+			fmt.Printf("%s sent: %s\n", conn.RemoteAddr(), string(msg))
+
+			// Write message back to browser
+			if err = conn.WriteMessage(msgType, msg); err != nil {
+				return
+			}
+		}
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/websockets/websockets.html")
+	})
+
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\12-WebSockets\webSockets.go
+
+# 在浏览器中访问 localhost:8080/，在输入框中输入 Hello Go Web Examples,you're doing great!
+# 在服务器中显示如下：
+```
+
+![image-20250107181947853](https://gitee.com/liangningi/typora_picture/raw/master/Go/202501071819179.png)
