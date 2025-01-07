@@ -747,3 +747,80 @@ $ go run .\06-AssetsAndFiles\assetsAndFiles.go
 # 使用浏览器访问 localhost:8080/static/css/styles.css
 ```
 
+# 07-Forms
+
+> 该文件目录为`gowebexample02/07-Forms`
+
+此示例将展示如何模拟联系表单并将消息解析为结构。
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"html/template"
+	"net/http"
+)
+
+type ContactDetails struct {
+	Email   string
+	Subject string
+	Message string
+}
+
+func main() {
+	tmpl := template.Must(template.ParseFiles("./static/forms/forms.html"))
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			tmpl.Execute(w, nil)
+			return
+		}
+
+		details := ContactDetails{
+			Email:   r.FormValue("email"),
+			Subject: r.FormValue("subject"),
+			Message: r.FormValue("message"),
+		}
+
+		// do something with details
+		_ = details
+
+		tmpl.Execute(w, struct {
+			Success bool
+		}{true})
+	})
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+在`static`文件夹下，创建`forms`文件夹，在该文件夹下，创建`forms.html`文件，其内容为：
+
+```html
+<!-- forms.html -->
+{{if .Success}}
+    <h1>Thanks for your message!</h1>
+{{else}}
+    <h1>Contact</h1>
+    <form method="POST">
+        <label>Email:</label><br />
+        <input type="text" name="email"><br />
+        <label>Subject:</label><br />
+        <input type="text" name="subject"><br />
+        <label>Message:</label><br />
+        <textarea name="message"></textarea><br />
+        <input type="submit">
+    </form>
+{{end}}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\07-Forms\forms.go
+
+# 打开浏览器访问： http://localhost:8080/
+```
+
+![image-20250107163106046](https://gitee.com/liangningi/typora_picture/raw/master/Go/202501071631415.png)
