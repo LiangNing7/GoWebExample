@@ -134,6 +134,105 @@ func main() {
 
 ```bash
 $ go run .\02-HTTPServer\HTTPServer.go
-# 然后在浏览器中访问：localhost:8080/static/images/Hello
+# 然后在浏览器中访问：localhost:8080/static/images/Hello.jpg
+```
+
+# Routing
+
+> 该文件目录为`gowebexample02/03-Routing`
+
+Go 的 `net/http` 包为 HTTP 协议提供了许多功能。 它做得不太好的一件事是复杂的请求路由，比如将请求 URL 分段为单个参数。 幸运的是，有一个非常流行的包可以做到这一点，它以 Go 社区中良好的代码质量而闻名。 在此示例中，您将看到如何使用 `gorilla/mux` 包创建具有命名参数、GET/POST 处理程序和域限制的路由。
+
+## `Installing the gorilla/mux`：安装`gorilla/mux`软件包
+
+`gorilla/mux` 是一个适用于 Go 默认 HTTP 路由器的包。它附带了许多功能，可提高编写 Web 应用程序时的生产力。 它还符合 Go 的默认请求处理程序签名 `func (w http.ResponseWriter, r *http.Request)`，因此该包可以与其他 HTTP 库（如中间件或现有应用程序）混合和匹配。使用 `go get` 命令从 GitHub 安装包，如下所示：
+
+```bash
+$ go get -u github.com/gorilla/mux
+```
+
+## `Creating a new Router`：创建新`Router`
+
+首先创建一个新的请求路由器。路由器是 Web 应用程序的主路由器，稍后将作为参数传递给服务器。 它将接收所有 HTTP 连接，并将其传递给您将在其上注册的请求处理程序。 您可以像这样创建一个新路由器：
+
+```go
+r := mux.NewRouter()
+```
+
+## `Registering a Request Handler`：注册请求处理程序
+
+一旦你有了新的路由器，你可以像往常一样注册请求处理程序。 唯一的区别是，你不再调用 `http.HandleFunc(...)`，而是像这样在你的路由器上调用 HandleFunc：`r.HandleFunc(...)`。
+
+## `URL Parameters`：URL 参数
+
+`gorilla/mux` 路由器最大的优势在于能够从请求 URL 中提取片段。 例如，这是您应用程序中的一个 URL：
+
+```go
+/books/go-programming-blueprint/page/10
+```
+
+此 URL 具有两个动态片段：
+
+1. 图书标题：`go-programming-blueprint`
+2. 页面：`10`
+
+要让请求处理程序匹配上面提到的 URL，请用 URL 模式中的占位符替换动态段，如下所示：
+
+```go
+r.HandleFunc("/books/{title}/page/{page}", func(w http.ResponseWriter, r *http.Request) {
+	// get the book
+    // navigate to the page
+})
+```
+
+最后一步是从这些段中获取数据。 该包带有一个函数 `mux.Vars(r)`，它将 `http.Request` 作为参数并返回一个段映射。
+
+```go
+func(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    vars["title"] // the book title slug
+    vars["page"] // the page
+}
+```
+
+## `Setting the HTTP server's router`：设置 HTTP 服务器的路由器
+
+有没有想过 `http.ListenAndServe(":80", nil)` 中的 `nil` 是什么意思？它是 HTTP 服务器主路由器的参数。 默认情况下，它是 `nil`，这意味着使用 `net/http` 包的默认路由器。要使用自己的路由器，请用路由器 `r` 的变量替换 `nil`。
+
+```go
+http.ListenAndServer(":80",r)
+```
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/mux"
+)
+
+func main() {
+	r := mux.NewRouter()
+	r.HandleFunc("/books/{title}/page/{page}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		title := vars["title"]
+		page := vars["page"]
+
+		fmt.Fprintf(w, "You've requested the book: %s on page %s\n", title, page)
+	})
+	http.ListenAndServe(":8080", r)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\03-Routing\Routing.go
+# 运行代码后，打开浏览器，访问：localhost:8080:/books/go-programming-blueprint/page/10
+# 在网页中显示：You've requested the book: go-programming-blueprint on page 10
 ```
 
