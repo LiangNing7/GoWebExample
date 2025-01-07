@@ -580,3 +580,131 @@ $ go run .\04-MySQLDatabase\mySQLDatabase.go
 ```
 
 最后在`goweb`数据库下，有`users`的空表。
+
+# 05-Templates
+
+> 该文件目录为`gowebexample02/05-Templates`
+
+Go 的 `html/template` 包为 HTML 模板提供了一种丰富的模板语言。 它主要用于 Web 应用程序，以结构化的方式在客户端浏览器中显示数据。 Go 模板语言的一大好处是自动转义数据。 无需担心 XSS 攻击，因为 Go 会解析 HTML 模板并在将其显示到浏览器之前转义所有输入。
+
+## `First Template`：第一个模板
+
+用 Go 编写模板非常简单。此示例显示了一个待办事项列表，该列表以 HTML 中的无序列表 (`ul`) 形式编写。 在呈现模板时，传入的数据可以是 Go 的任何类型的数据结构。它可以是一个简单的字符串或数字，甚至可以是嵌套数据结构，如下面的示例所示。要访问模板中的数据，最顶层的变量通过 `{{.}}` 访问。大括号内的点称为管道，是数据的根元素。
+
+```go
+data := ToDoPageData{
+    PageTitle: "My TODO list",
+    Todos: []Todo{
+        {Title: "Task 1", Done: false},
+        {Title: "Task 2", Done: true},
+        {Title: "Task 3", Done: true},
+    }
+}
+```
+
+```html
+<h1>{{.PageTitle}}</h1>
+<ul>
+    {{range .Todos}}
+        {{if .Done}}
+            <li class="done">{{.Title}}</li>
+        {{else}}
+            <li>{{.Title}}</li>
+        {{end}}
+    {{end}}
+</ul>
+```
+
+## `Control Structures`：控制结构
+
+模板语言包含一组丰富的控制结构来呈现您的 HTML。在这里，您将获得最常用结构的概述。 要获取所有可能结构的详细列表，请访问：`text/template`
+
+| Control Structure                | Definition                                   |
+| -------------------------------- | -------------------------------------------- |
+| `{{/* a comment */}}`            | 定义注释                                     |
+| `{{.}}`                          | 渲染根元素                                   |
+| `{{.Title}}`                     | 在嵌套元素中呈现`Title`字段                  |
+| `{{if .Done}} {{else}} {{end}}`  | 定义 if 语句                                 |
+| `{{range .Todos}} {{.}} {{end}}` | 遍历所有`Todos`并使用 `{{.}}` 渲染每个`Todo` |
+| `{{block "content" .}} {{end}}`  | 定义一个名为`content`的块                    |
+
+## `Parsing Templates from Files`：从文件中解析模板
+
+模板可以从字符串或磁盘上的文件进行解析。 由于通常情况下模板是从磁盘解析的，因此本示例演示如何执行此操作。 在此示例中，Go 程序所在目录中有一个名为 `layout.html` 的模板文件。
+
+```go
+tmpl,err := template.ParseFiles("layout.html")
+// or
+tmpl := template.Must(template.ParseFiles("layout.html"))
+```
+
+## `Execute a Template in a Request Handler`：在请求处理程序中执行模板
+
+一旦从磁盘解析模板，就可以在请求处理程序中使用它。 `Execute` 函数接受一个 `io.Writer` 用于写出模板和一个 `interface{}` 用于将数据传递到模板中。 当该函数在 `http.ResponseWriter` 上调用时，`Content-Type` 标头会自动设置在 HTTP 响应中，为 `Content-Type: text/html; charset=utf-8`。
+
+```go
+func(w http.ResponseWriter, r *http.Request) {
+    tmpl.Execute(w, "data goes here")
+}
+```
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"html/template"
+	"net/http"
+)
+
+type Todo struct {
+	Title string
+	Done  bool
+}
+
+type TodoPageData struct {
+	PageTitle string
+	Todos     []Todo
+}
+
+func main() {
+	tmpl := template.Must(template.ParseFiles("templates/layout.html"))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data := TodoPageData{
+			PageTitle: "My TODO list",
+			Todos: []Todo{
+				{Title: "Task 1", Done: false},
+				{Title: "Task 2", Done: true},
+				{Title: "Task 3", Done: true},
+			},
+		}
+		tmpl.Execute(w, data)
+	})
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+创建`templates`文件夹，在其中创建`layout.html`，在其中写入：
+
+```html
+<h1>{{.PageTitle}}</h1>
+<ul>
+    {{range .Todos}}
+        {{if .Done}}
+            <li class="done">{{.Title}}</li>
+        {{else}}
+            <li>{{.Title}}</li>
+        {{end}}
+    {{end}}
+</ul>
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\05-Templates\templats.go
+# 打开浏览器，访问 localhost:8080/ 会出现如下界面
+```
+
+![image-20250107154043910](https://gitee.com/liangningi/typora_picture/raw/master/Go/202501071541218.png)
