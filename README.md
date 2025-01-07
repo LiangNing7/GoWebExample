@@ -708,3 +708,42 @@ $ go run .\05-Templates\templats.go
 ```
 
 ![image-20250107154043910](https://gitee.com/liangningi/typora_picture/raw/master/Go/202501071541218.png)
+
+# 06-AssetsAndFiles
+
+> 该文件目录为`gowebexample02/06-AssetsAndFiles`
+
+此示例将展示如何从特定目录提供静态文件，如 CSS、JavaScript 或 images。
+
+示例代码如下：
+
+```go
+package main
+
+import "net/http"
+
+func main() {
+	fs := http.FileServer(http.Dir("assets/"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+在`gowebexample02`文件夹中创建`assets/css`文件夹，并在器中创建`styles.css`文件
+
+其文件中写入：
+
+```css
+body {
+    background-color: black;
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\06-AssetsAndFiles\assetsAndFiles.go
+
+# 使用浏览器访问 localhost:8080/static/css/styles.css
+```
+
