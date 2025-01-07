@@ -1204,3 +1204,57 @@ $ go run .\12-WebSockets\webSockets.go
 ```
 
 ![image-20250107181947853](https://gitee.com/liangningi/typora_picture/raw/master/Go/202501071819179.png)
+
+# 13-PasswordHashing【bcrypt】
+
+> 该文件目录为`gowebexample02/13-PasswordHashing`
+
+此示例将展示如何使用 bcrypt 哈希密码。 为此，我们必须像这样获取 `golang bcrypt` 库：
+
+```bash
+$ go get golang.org/x/crypto/bcrypt
+```
+
+从现在开始，我们编写的每个应用程序都将能够使用此库。
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func main() {
+	password := "secret"
+	hash, _ := HashPassword(password) // ignore error for the sake of simplicity
+	fmt.Println("Password:", password)
+	fmt.Println("Hash:", hash)
+    
+	match := CheckPasswordHash(password, hash)
+	fmt.Println("Match:", match)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\13-PasswordHashing\passwordHashing.go
+Password: secret
+Hash: $2a$14$4qSnjZIJl5XIK3oMzBa9re3ClVVVXUtxgfZ4umngys2zKS9NJOZDa
+Match: true
+```
+
