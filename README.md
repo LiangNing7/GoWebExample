@@ -137,7 +137,7 @@ $ go run .\02-HTTPServer\HTTPServer.go
 # 然后在浏览器中访问：localhost:8080/static/images/Hello.jpg
 ```
 
-# Routing
+# 03-Routing
 
 > 该文件目录为`gowebexample02/03-Routing`
 
