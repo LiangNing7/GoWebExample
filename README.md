@@ -999,3 +999,86 @@ $ curl -s -XPOST http://localhost:8080/
 Bad Request
 ```
 
+# 10-Sessions
+
+> 该文件目录为`gowebexample02/10-Sessions`
+
+本示例将展示如何使用 Go 中流行的 `gorilla/sessions` 包将数据存储在会话 `cookie` 中。
+
+Cookie 是存储在用户浏览器中的小块数据，并在每次请求时发送到我们的服务器。在其中，我们可以存储例如用户是否已登录到我们的网站以及找出他实际上是谁（在我们的系统中）。
+
+在这个示例中，我们只允许经过身份验证的用户在 `/secret` 页面上查看我们的秘密消息。要访问它，他们首先必须访问 `/login` 以获取有效的会话 `cookie`，该 `cookie` 会将其登录。此外，他还可以访问 `/logout` 以撤销他对我们秘密消息的访问权限。
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/sessions"
+)
+
+var (
+	// key must be 16, 24 or 32 bytes long (AES-128, AES-192, or AES-256)
+	key   = []byte("super-secret-key")
+	store = sessions.NewCookieStore(key)
+)
+
+func secret(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+
+	// Check if user is authenticated
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	// Print secret message
+	fmt.Fprintln(w, "The cake is a lie!")
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+	// Authentication goes here
+	// ...
+
+	// Set user as authenticated
+	session.Values["authenticated"] = true
+	session.Save(r, w)
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+
+	// Revoke users authentication
+	session.Values["authenticated"] = false
+	session.Save(r, w)
+}
+
+func main() {
+	http.HandleFunc("/secret", secret)
+	http.HandleFunc("/login", login)
+	http.HandleFunc("/logout", logout)
+
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\10-Sessions\sessions.go
+
+$ curl -s http://localhost:8080/secret
+Forbidden
+
+$ curl -s -I http://localhost:8080/login
+Set-Cookie: cookie-name=MTQ4NzE5Mz...
+
+$ curl -s --cookie "cookie-name=MTQ4NzE5Mz..." http://localhost:8080/secret
+The cake is a lie!
+```
+
