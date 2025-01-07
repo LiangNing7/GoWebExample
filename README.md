@@ -824,3 +824,178 @@ $ go run .\07-Forms\forms.go
 ```
 
 ![image-20250107163106046](https://gitee.com/liangningi/typora_picture/raw/master/Go/202501071631415.png)
+
+# 08-Middleware【Basic】
+
+> 该文件目录为`gowebexample02/08-MiddlewareB`
+
+中间件只是将 `http.HandlerFunc` 作为其参数之一，对其进行包装，并为服务器调用返回一个新的 `http.HandlerFunc`。
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func logging(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.URL.Path)
+		f(w,r)
+	}
+}
+
+func foo(w http.ResponseWriter, r *http.Request){
+	fmt.Fprintln(w, "foo")
+}
+
+func bar(w http.ResponseWriter, r *http.Request){
+	fmt.Fprintln(w, "bar")
+}
+
+func main() {
+	http.HandleFunc("/foo",logging(foo))
+	http.HandleFunc("/bar",logging(bar))
+	
+	http.ListenAndServe(":8080",nil)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\08-MiddlewareB\middlewareB.go
+
+# 使用浏览器访问 localhost:8080/foo，在终端会打印出：
+2025/01/07 17:15:18 /foo
+
+# 使用浏览器访问 localhost:8080/bar，在终端会打印出：
+2025/01/07 17:15:22 /bar
+```
+
+# 09-Middleware【Advanced】
+
+> 该文件目录为`gowebexample02/09-MiddlewareA`
+
+中间件本身只将 `http.HandlerFunc` 作为其参数之一，对其进行包装并返回一个新的 `http.HandlerFunc` 供服务器调用。
+
+在这里我们定义了一个新的类型 Middleware，它最终使得将多个中间件链接在一起变得更加容易。这个想法的灵感来自 Mat Ryers 关于构建 API 的演讲。 你可以在此处找到包括演讲在内的更详细的解释。
+
+此代码段详细说明了如何创建新的中间件。在下面的完整示例中，我们通过一些样板代码减少了此版本。
+
+```go
+func createNewMiddleware() Middleware {
+
+    // Create a new Middleware
+    middleware := func(next http.HandlerFunc) http.HandlerFunc {
+
+        // Define the http.HandlerFunc which is called by the server eventually
+        handler := func(w http.ResponseWriter, r *http.Request) {
+
+            // ... do middleware things
+
+            // Call the next middleware/handler in chain
+            next(w, r)
+        }
+
+        // Return newly created handler
+        return handler
+    }
+
+    // Return newly created middleware
+    return middleware
+}
+```
+
+
+
+示例代码如下：
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+)
+
+type Middleware func(http.HandlerFunc) http.HandlerFunc
+
+// Logging logs all requests with its path and the time it took to process
+func Logging() Middleware {
+
+	// Create a new Middleware
+	return func(f http.HandlerFunc) http.HandlerFunc {
+
+		// Define the http.HandlerFunc
+		return func(w http.ResponseWriter, r *http.Request) {
+
+			// Do middleware things
+			start := time.Now()
+			defer func() { log.Println(r.URL.Path, time.Since(start)) }()
+
+			// Call the next middleware/handler in chain
+			f(w, r)
+		}
+	}
+}
+
+// Method ensures that url can only be requested with a specific method, else returns a 400 Bad Request
+func Method(m string) Middleware {
+
+	// Create a new Middleware
+	return func(f http.HandlerFunc) http.HandlerFunc {
+
+		// Define the http.HandlerFunc
+		return func(w http.ResponseWriter, r *http.Request) {
+
+			// Do middleware things
+			if r.Method != m {
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
+
+			// Call the next middleware/handler in chain
+			f(w, r)
+		}
+	}
+}
+
+// Chain 应用中间件到 http.HandlerFunc
+func Chain(f http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
+	for _, m := range middlewares {
+		f = m(f)
+	}
+	return f
+}
+
+func Hello(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "hello world")
+}
+
+func main() {
+	http.HandleFunc("/", Chain(Hello, Method("GET"), Logging()))
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\09-MiddlewareA\middlewareA.go
+
+# linux
+$ curl -s http://localhost:8080/
+hello world
+
+# linux
+$ curl -s -XPOST http://localhost:8080/
+Bad Request
+```
+
