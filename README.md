@@ -1082,3 +1082,57 @@ $ curl -s --cookie "cookie-name=MTQ4NzE5Mz..." http://localhost:8080/secret
 The cake is a lie!
 ```
 
+# 11-JSON
+
+> 该文件目录为`gowebexample02/11-JSON`
+
+本示例将展示如何使用 `encoding/json` 包对 JSON 数据进行编码和解码。
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+type User struct {
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	Age       int    `json:"age"`
+}
+
+func main() {
+	http.HandleFunc("/decode", func(w http.ResponseWriter, r *http.Request) {
+		var user User
+		json.NewDecoder(r.Body).Decode(&user)
+
+		fmt.Fprintf(w, "%s %s is %d years old!", user.FirstName, user.LastName, user.Age)
+	})
+
+	http.HandleFunc("/encode", func(w http.ResponseWriter, r *http.Request) {
+		peter := User{
+			FirstName: "john",
+			LastName:  "doe",
+			Age:       25,
+		}
+		json.NewEncoder(w).Encode(peter)
+	})
+
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+可以使用如下代码运行：
+
+```bash
+$ go run .\11-JSON\json.go
+
+$ curl -s -XPOST -d'{"firstname":"Elon","lastname":"Musk","age":48}' http://localhost:8080/decode
+Elon Musk is 48 years old!
+
+$ curl -s http://localhost:8080/encode
+{"firstname":"John","lastname":"Doe","age":25}
+```
+
