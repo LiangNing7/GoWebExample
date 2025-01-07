@@ -236,3 +236,42 @@ $ go run .\03-Routing\Routing.go
 # 在网页中显示：You've requested the book: go-programming-blueprint on page 10
 ```
 
+## `Features of the gorilla/mux Router`： `gorilla/mux`路由器的特性
+
+### `Methods`：方法
+
+将请求处理程序限制为特定的 HTTP 方法。
+
+- ```go
+  r.HandleFunc("/books/{title}", CreateBook).Methods("POST")
+  r.HandleFunc("/books/{title}", ReadBook).Methods("GET")
+  r.HandleFunc("/books/{title}", UpdateBook).Methods("PUT")
+  r.HandleFunc("/books/{title}", DeleteBook).Methods("DELETE")
+  ```
+
+### `Hostnames & Subdomains`：主机名和子域
+
+将请求处理程序限制到特定主机名或子域名。
+
+- ```go
+  r.HandleFunc("/books/{title}", BookHandler).Host("www.mybookstore.com")
+  ```
+
+### `Schemes`：方案
+
+将请求处理程序限制为 `http/https`
+
+- ```go
+  r.HandleFunc("/secure", SecureHandler).Schemes("https")
+  r.HandleFunc("/insecure", InsecureHandler).Schemes("http")
+  ```
+
+### `Path prefixes & Subrouters`：路径前缀和子路由器
+
+将请求处理程序限制为特定路径前缀。
+
+- ```go
+  bookrouter := r.PathPrefix("/books").Subrouter()
+  bookrouter.HandleFunc("/", AllBooks)
+  bookrouter.HandleFunc("/{title}", GetBook)
+  ```
